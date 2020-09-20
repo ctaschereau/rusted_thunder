@@ -1413,6 +1413,7 @@ name = "rusted_thunder"
 version = "0.1.0"
 dependencies = [
  "dirs 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gdk 0.13.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "gio 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gtk 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",

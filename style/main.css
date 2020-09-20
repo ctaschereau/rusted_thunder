@@ -1,0 +1,22 @@
+.box1 {
+	background-color: red;
+}
+.header_bar {
+	background-color: blue;
+}
+
+levelbar block.low {
+	color: red;
+	background-color: red;
+	border-style: solid;
+	border-color: red;
+	border-width: 2px;
+}
+
+levelbar block.medium {
+	color: yellow;
+	border-style: solid;
+	border-color: yellow;
+	border-width: 2px;
+}
+

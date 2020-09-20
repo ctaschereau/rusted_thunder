@@ -8,6 +8,8 @@ mod config;
 
 use tesla::{TeslaClient, Vehicle, VehicleState, VehicleClient, StateOfCharge};
 
+extern crate gdk;
+
 use gtk::prelude::*;
 use gio::prelude::*;
 
@@ -38,6 +40,16 @@ fn build_ui(app: &gtk::Application) {
     let glade_src = include_str!("app_layout.glade");
     let builder = gtk::Builder::from_string(glade_src);
 
+    let provider = gtk::CssProvider::new();
+    provider
+        .load_from_path("./style/main.css")
+        .expect("Failed to load CSS");
+    gtk::StyleContext::add_provider_for_screen(
+        &gdk::Screen::get_default().expect("Error initializing gtk css provider."),
+        &provider,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+
     let car_name_label: gtk::Label = builder.get_object("car_name_label").unwrap();
     car_name_label.set_text(car_name.as_str());
 
@@ -53,6 +65,7 @@ fn build_ui(app: &gtk::Application) {
 }
 
 fn get_config() -> Config {
+    // TODO : Allow a different path, different filename and use a different default name.
     let config_path = home_dir().unwrap().join(".teslac");
     let config_data = fs::read_to_string(config_path).expect("Cannot read config");
     return toml::from_str(config_data.as_str()).expect("Cannot parse config");
@@ -93,6 +106,7 @@ fn set_doors_and_windows_state(builder: &gtk::Builder, vehicle_state: &VehicleSt
 fn set_battery_state(builder: &gtk::Builder, charge_state: &StateOfCharge) {
     let battery_indicator_bar: gtk::LevelBar = builder.get_object("battery_indicator_bar").unwrap();
     battery_indicator_bar.set_value(charge_state.battery_level as f64 / 100.0);
+    battery_indicator_bar.add_offset_value ("medium", 0.50);
     let battery_level_label: gtk::Label = builder.get_object("battery_level_label").unwrap();
     let charging_label: gtk::Label = builder.get_object("charging_label").unwrap();
 
