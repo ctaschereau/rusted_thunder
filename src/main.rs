@@ -4,11 +4,11 @@ use std::fs;
 use std::thread::sleep;
 use std::time::Duration;
 use std::rc::Rc;
-use std::cell::{RefCell, Ref};
 
 use dirs::home_dir;
 use gio::prelude::*;
 use gtk::prelude::*;
+#[allow(unused_imports)]
 use tesla::{FullVehicleData, StateOfCharge, TeslaClient, Vehicle, VehicleClient, VehicleState, ClimateState};
 
 use crate::config::Config;
@@ -23,58 +23,30 @@ struct RustedThunderApp {
     #[allow(dead_code)]
     client: TeslaClient,
     vclient: VehicleClient,
-    all_data: RefCell<Option<FullVehicleData>>, // TODO: Should I use RefCell<Option<FullVehicleData>> OR Option<RefCell<FullVehicleData>> ???
+    all_data: FullVehicleData,
 }
 
 impl RustedThunderApp {
-    fn new(builder: gtk::Builder, client: TeslaClient, vclient: VehicleClient) -> Rc<RustedThunderApp> {
+    fn new(builder: gtk::Builder, client: TeslaClient, vclient: VehicleClient, all_data: FullVehicleData) -> Rc<RustedThunderApp> {
         let instance = Rc::new(RustedThunderApp {
             builder: builder,
             client: client,
             vclient: vclient,
-            all_data: RefCell::new(None),
+            all_data: all_data,
         });
         instance
     }
 
-    fn wake_up_if_needed(&self, vehicle: Vehicle) {
-        if vehicle.state != "online" {
-            println!("Waking up");
-            match self.vclient.wake_up() {
-                Ok(_) => println!("Sent wakeup command"),
-                Err(e) => println!("Wake up failed {:?}", e)
-            }
-
-            println!("Waiting for car to wake up.");
-            loop {
-                if let Some(vehicle) = self.vclient.get().ok() {
-                    if vehicle.state == "online" {
-                        break;
-                    } else {
-                        println!("Car is not yet online (current state is {}), waiting.", vehicle.state);
-                    }
-                }
-
-                sleep(Duration::from_secs(1));
-            }
-        }
-    }
-
     fn set_button_labels(&self) {
-        let w = self.all_data.borrow();
-        let x: &FullVehicleData = w.as_ref().unwrap();
-
         let climate_control_button: gtk::Button = self.builder.get_object("climate_control_button").unwrap();
-        let climate_state: &ClimateState = &x.climate_state;
-        if climate_state.is_auto_conditioning_on {
+        if self.all_data.climate_state.is_auto_conditioning_on {
             climate_control_button.set_label("Turn climate control OFF");
         } else {
             climate_control_button.set_label("Turn climate control ON");
         }
 
         let lock_button: gtk::Button = self.builder.get_object("lock_button").unwrap();
-        let vehicle_state: &VehicleState = &x.vehicle_state;
-        if vehicle_state.locked {
+        if self.all_data.vehicle_state.locked {
             lock_button.set_label("Unlock");
         } else {
             lock_button.set_label("Lock");
@@ -115,9 +87,7 @@ impl RustedThunderApp {
     }
 
     fn set_doors_and_windows_state(&self) {
-        // TODO : This is way to ugly!! How can I get the vehicle_state in a nicer way?
-        let x: Ref<Option<FullVehicleData>> = self.all_data.borrow();
-        let vehicle_state: &VehicleState = &x.as_ref().unwrap().vehicle_state;
+        let vehicle_state: &VehicleState = &self.all_data.vehicle_state;
 
         let rear_trunk_open_image: gtk::Image = self.builder.get_object("rear_trunk_open_image").unwrap();
         rear_trunk_open_image.set_opacity(vehicle_state.rt as f64);
@@ -142,9 +112,7 @@ impl RustedThunderApp {
     }
 
     fn set_battery_state(&self) {
-        let x: Ref<Option<FullVehicleData>> = self.all_data.borrow();
-        let y = x.as_ref();
-        let charge_state: &StateOfCharge = &y.unwrap().charge_state;
+        let charge_state: &StateOfCharge = &self.all_data.charge_state;
 
         let battery_indicator_bar: gtk::LevelBar = self.builder.get_object("battery_indicator_bar").unwrap();
         battery_indicator_bar.set_value(charge_state.battery_level as f64 / 100.0);
@@ -169,10 +137,7 @@ impl RustedThunderApp {
     }
 
     fn on_climate_control_button_clicked(&self, _button: &gtk::Button) {
-        let x: Ref<Option<FullVehicleData>> = self.all_data.borrow();
-        let y = x.as_ref();
-        let climate_state: &ClimateState = &y.unwrap().climate_state;
-        if climate_state.is_auto_conditioning_on {
+        if self.all_data.climate_state.is_auto_conditioning_on {
             match self.vclient.auto_conditioning_stop() {
                 // TODO : Should I log the _v variable if _.result != true ?
                 Ok(_v) => println!("auto_conditioning has been stopped."),
@@ -192,10 +157,7 @@ impl RustedThunderApp {
     }
 
     fn on_lock_button_clicked(&self, _button: &gtk::Button) {
-        let x: Ref<Option<FullVehicleData>> = self.all_data.borrow();
-        let y = x.as_ref();
-        let vehicle_state: &VehicleState = &y.unwrap().vehicle_state;
-        if vehicle_state.locked {
+        if self.all_data.vehicle_state.locked {
             match self.vclient.door_unlock() {
                 // TODO : Should I log the _v variable if _.result != true ?
                 Ok(_v) => println!("doors have been unlocked."),
@@ -237,15 +199,12 @@ fn build_ui(app: &gtk::Application) {
     let vehicle = client.get_vehicle_by_name(car_name.as_str()).unwrap().expect("Car does not exist by that name");
     let vclient = client.vehicle(vehicle.id);
 
-    let rt_app = RustedThunderApp::new(builder, client, vclient);
+    wake_up_if_needed(&vclient, vehicle);
 
-    rt_app.wake_up_if_needed(vehicle);
+    let all_data = vclient.get_all_data().expect("Could not get all data");
+    // println!("Al data : {:#?}", all_data);
 
-    {
-        let mut all_data = rt_app.all_data.borrow_mut();
-        all_data.replace(rt_app.vclient.get_all_data().expect("Could not get all data"));
-        // println!("Al data : {:#?}", all_data);
-    }
+    let rt_app = RustedThunderApp::new(builder, client, vclient, all_data);
 
     let car_name_label: gtk::Label = rt_app.builder.get_object("car_name_label").unwrap();
     car_name_label.set_text(car_name.as_str());
@@ -274,4 +233,27 @@ fn get_config() -> Config {
     let config_path = home_dir().unwrap().join(".teslac");
     let config_data = fs::read_to_string(config_path).expect("Cannot read config");
     return toml::from_str(config_data.as_str()).expect("Cannot parse config");
+}
+
+fn wake_up_if_needed(vclient: &VehicleClient, vehicle: Vehicle) {
+    if vehicle.state != "online" {
+        println!("Waking up");
+        match vclient.wake_up() {
+            Ok(_) => println!("Sent wakeup command"),
+            Err(e) => println!("Wake up failed {:?}", e)
+        }
+
+        println!("Waiting for car to wake up.");
+        loop {
+            if let Some(vehicle) = vclient.get().ok() {
+                if vehicle.state == "online" {
+                    break;
+                } else {
+                    println!("Car is not yet online (current state is {}), waiting.", vehicle.state);
+                }
+            }
+
+            sleep(Duration::from_secs(1));
+        }
+    }
 }

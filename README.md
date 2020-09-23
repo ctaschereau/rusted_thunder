@@ -21,5 +21,6 @@ At the moment, the api_token needs to be generated from outside of this app.
     - Fix CSS that does not work for now
 - Implement refresh button/action and/or auto refresh
 - Implement login and saving the resulting API token
+- Use proper Rust error handling instead of ugly unwraps everywhere
 - Allow multiple configuration path/file options
 - Implement preferred unit (metric or imperial)
