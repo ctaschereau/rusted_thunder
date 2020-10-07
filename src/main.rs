@@ -2,35 +2,33 @@ extern crate gdk;
 extern crate gio;
 extern crate glib;
 
-use std::fs;
-use std::thread::sleep;
-use std::time::Duration;
-//use std::rc::Rc;
+use std::rc::Rc;
 use std::io::Write;
-use std::thread;
+//use futures::{channel::mpsc}; // StreamExt
+use std::sync::mpsc;
 
-use dirs::home_dir;
 use gio::prelude::*;
 use gtk::prelude::*;
 #[allow(unused_imports)]
 use tesla::{FullVehicleData, StateOfCharge, TeslaClient, Vehicle, VehicleClient, VehicleState, ClimateState};
 
-use crate::config::Config;
+
 #[macro_use]
 extern crate log;
 use chrono::Local;
 use log::LevelFilter;
+use crate::message_types::{Message, Message2};
 
+
+mod communicator;
+mod message_types;
 mod config;
 
 // TODO : Use all_data.gui_settings.gui_distance_units // km/hr
 const KM_PER_MILES: f64 = 1.6;
 
 
-enum Message {
-    SendVehicle(Vehicle),
-    SendFullVehicleData(FullVehicleData),
-}
+
 
 /*
 struct RustedThunderApp {
@@ -220,7 +218,7 @@ fn init_logger() {
 
 fn build_ui(app: &gtk::Application) {
     let glade_src = include_str!("app_layout.glade");
-    let builder = gtk::Builder::from_string(glade_src);
+    let builder: Rc<gtk::Builder> = Rc::new(gtk::Builder::from_string(glade_src));
 
     let provider = gtk::CssProvider::new();
     provider
@@ -235,36 +233,24 @@ fn build_ui(app: &gtk::Application) {
     let spinner_screen: gtk::EventBox = builder.get_object("spinner_screen").unwrap();
     spinner_screen.show_all();
 
+    // Create 2 channels (one for each direction) between the communication thread (API caller) and main event loop
+    //let (tx_to_comm, rx_on_comm):(mpsc::Sender<Message2>, mpsc::Receiver<Message2>) = mpsc::channel(1000);
+    let (tx_to_comm, rx_on_comm):(mpsc::Sender<Message2>, mpsc::Receiver<Message2>) = mpsc::channel();
+    let (tx_to_gui, rx_on_gui):(glib::Sender<Message>, glib::Receiver<Message>) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+
+    spawn_local_handler(rx_on_gui, tx_to_comm, Rc::clone(&builder));
+    communicator::start_communication_thread(rx_on_comm, tx_to_gui);
+
     let window: gtk::ApplicationWindow = builder.get_object("main_window").unwrap();
     window.set_application(Some(app));
     window.show();
     info!("GTK app init done!");
+}
 
-    let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
-    thread::spawn(move || {
-        debug!("Going to init the Tesla api clients...");
-        let cfg: Config = get_config();
-        let client = TeslaClient::default(cfg.global.api_token.as_str());
-        let car_name = cfg.global.default_vehicle.unwrap();
-        debug!("Tesla api client init done. Going to fetch the vehicles...");
-        let vehicle = client.get_vehicle_by_name(car_name.as_str()).unwrap().expect("Car does not exist by that name");
-        let vclient = client.vehicle(vehicle.id);
-        debug!("Got the vehicles.");
-        let vehicle_state = vehicle.state.clone();
-        tx.send(Message::SendVehicle(vehicle)).expect("Couldn't send data to channel");
-
-        if vehicle_state != "online" {
-            wake_up(&vclient);
-        }
-
-        debug!("Going to get the vehicle data!");
-        let all_data = vclient.get_all_data().expect("Could not get all data");
-
-        tx.send(Message::SendFullVehicleData(all_data)).expect("Couldn't send data to channel");
-    });
-
-    rx.attach(None, move |msg| {
+fn spawn_local_handler(rx_on_gui: glib::Receiver<Message>, tx_to_comm: mpsc::Sender<Message2>, builder: Rc<gtk::Builder>) {
+    set_buttons(Rc::clone(&builder), tx_to_comm);
+    rx_on_gui.attach(None, move |msg| {
         match msg {
             Message::SendVehicle(vehicle) => {
                 let car_name_label: gtk::Label = builder.get_object("car_name_label").unwrap();
@@ -272,9 +258,12 @@ fn build_ui(app: &gtk::Application) {
             }
             Message::SendFullVehicleData(all_data) => {
                 // println!("Al data : {:#?}", all_data);
+                let spinner_screen: gtk::EventBox = builder.get_object("spinner_screen").unwrap();
                 spinner_screen.set_visible(false);
-                set_battery_state(&builder, &all_data.charge_state);
-                set_doors_and_windows_state(&builder, &all_data.vehicle_state);
+                set_battery_state(Rc::clone(&builder), &all_data.charge_state);
+                set_doors_and_windows_state(Rc::clone(&builder), &all_data.vehicle_state);
+                set_button_labels(Rc::clone(&builder), &all_data);
+
 
                 /*
                 let rt_app = RustedThunderApp::new(builder, client, vclient, all_data);
@@ -303,35 +292,7 @@ fn build_ui(app: &gtk::Application) {
     });
 }
 
-fn get_config() -> Config {
-    // TODO : Allow a different path, different filename and use a different default name.
-    let config_path = home_dir().unwrap().join(".teslac");
-    let config_data = fs::read_to_string(config_path).expect("Cannot read config");
-    return toml::from_str(config_data.as_str()).expect("Cannot parse config");
-}
-
-fn wake_up(vclient: &VehicleClient) {
-    println!("Waking up");
-    match vclient.wake_up() {
-        Ok(_) => println!("Sent wakeup command"),
-        Err(e) => println!("Wake up failed {:?}", e)
-    }
-
-    println!("Waiting for car to wake up.");
-    loop {
-        if let Some(vehicle) = vclient.get().ok() {
-            if vehicle.state == "online" {
-                break;
-            } else {
-                println!("Car is not yet online (current state is {}), waiting.", vehicle.state);
-            }
-        }
-
-        sleep(Duration::from_secs(1));
-    }
-}
-
-fn set_doors_and_windows_state(builder: &gtk::Builder, vehicle_state: &VehicleState) {
+fn set_doors_and_windows_state(builder: Rc<gtk::Builder>, vehicle_state: &VehicleState) {
     let rear_trunk_open_image: gtk::Image =  builder.get_object("rear_trunk_open_image").unwrap();
     rear_trunk_open_image.set_opacity(vehicle_state.rt as f64);
     let front_trunk_open: gtk::Image =  builder.get_object("front_trunk_open").unwrap();
@@ -354,7 +315,7 @@ fn set_doors_and_windows_state(builder: &gtk::Builder, vehicle_state: &VehicleSt
     driver_rear_window_open.set_opacity(vehicle_state.rd_window as f64);
 }
 
-fn set_battery_state(builder: &gtk::Builder, charge_state: &StateOfCharge) {
+fn set_battery_state(builder: Rc<gtk::Builder>, charge_state: &StateOfCharge) {
     let battery_indicator_bar: gtk::LevelBar = builder.get_object("battery_indicator_bar").unwrap();
     battery_indicator_bar.set_value(charge_state.battery_level as f64 / 100.0);
     battery_indicator_bar.add_offset_value("medium", 0.50);
@@ -375,4 +336,89 @@ fn set_battery_state(builder: &gtk::Builder, charge_state: &StateOfCharge) {
         _ => charging_label_text = charge_state.charging_state.clone()
     }
     charging_label.set_text(charging_label_text.as_str());
+}
+
+fn set_button_labels(builder: Rc<gtk::Builder>, all_data: &FullVehicleData) {
+    let climate_control_button: gtk::Button = builder.get_object("climate_control_button").unwrap();
+    if all_data.climate_state.is_auto_conditioning_on {
+        climate_control_button.set_label("Turn climate control OFF");
+    } else {
+        climate_control_button.set_label("Turn climate control ON");
+    }
+
+    let lock_button: gtk::Button = builder.get_object("lock_button").unwrap();
+    if all_data.vehicle_state.locked {
+        lock_button.set_label("Unlock");
+    } else {
+        lock_button.set_label("Lock");
+    }
+}
+
+fn set_buttons(builder: Rc<gtk::Builder>, tx_to_comm: mpsc::Sender<Message2>) {
+    let mut tx2 = tx_to_comm.clone();
+    let refresh_button: gtk::Button = builder.get_object("refresh_button").unwrap();
+    refresh_button.connect_clicked(move |_button| {
+        let mut tx3 = tx2.clone();
+        on_refresh_button_clicked(&mut tx3);
+    });
+    let climate_control_button: gtk::Button = builder.get_object("climate_control_button").unwrap();
+    climate_control_button.connect_clicked(|_button| {
+        on_climate_control_button_clicked(_button);
+    });
+    let frunk_button: gtk::Button = builder.get_object("frunk_button").unwrap();
+    frunk_button.connect_clicked(|_button| {
+        on_frunk_button_clicked(_button);
+    });
+    let lock_button: gtk::Button = builder.get_object("lock_button").unwrap();
+    lock_button.connect_clicked(|_button| {
+        on_lock_button_clicked(_button);
+    });
+}
+
+fn on_refresh_button_clicked(tx_to_comm: &mut mpsc::Sender<Message2>) {
+    match tx_to_comm.send(Message2::DoRefresh()) {
+        Ok(_) => {}
+        Err(err) => println!("{:?}", err)
+    }
+}
+
+fn on_climate_control_button_clicked(_button: &gtk::Button) {
+    println!("on_climate_control_button_clicked!");
+    /*
+    if all_data.climate_state.is_auto_conditioning_on {
+        match vclient.auto_conditioning_stop() {
+            // TODO : Should I log the _v variable if _.result != true ?
+            Ok(_v) => println!("auto_conditioning has been stopped."),
+            Err(e) => println!("failed to stop the auto_conditioning: {:?}", e),
+        }
+    } else {
+        match vclient.auto_conditioning_start() {
+            Ok(_v) => println!("auto_conditioning has been turned on."),
+            Err(e) => println!("failed to start the auto_conditioning: {:?}", e),
+        }
+    }
+    */
+}
+
+fn on_frunk_button_clicked(_button: &gtk::Button) {
+    println!("on_frunk_button_clicked!");
+    //TODO: POST /api/1/vehicles/{id}/command/actuate_trunk
+}
+
+fn on_lock_button_clicked(_button: &gtk::Button) {
+    println!("on_lock_button_clicked!");
+    /*
+    if all_data.vehicle_state.locked {
+        match vclient.door_unlock() {
+            // TODO : Should I log the _v variable if _.result != true ?
+            Ok(_v) => println!("doors have been unlocked."),
+            Err(e) => println!("failed to unlock the doors: {:?}", e),
+        }
+    } else {
+        match vclient.door_lock() {
+            Ok(_v) => println!("doors have been locked."),
+            Err(e) => println!("failed to lock the doors: {:?}", e),
+        }
+    }
+    */
 }

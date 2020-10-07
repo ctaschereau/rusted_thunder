@@ -34,8 +34,20 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="hexpand">True</property>
-                        <property name="label" translatable="yes" />
                       </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="refresh_button">
+                        <property name="label">gtk-refresh</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="use_stock">True</property>
+                      </object>
+                      <packing>
+                        <property name="pack_type">end</property>
+                        <property name="position">1</property>
+                      </packing>
                     </child>
                   </object>
                   <packing>
@@ -73,7 +85,6 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="label" translatable="yes" />
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -94,7 +105,6 @@
                 <property name="height_request">35</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes" />
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -124,9 +134,9 @@
                 </child>
                 <child>
                   <object class="GtkImage" id="driver_front_window_open">
-                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
+                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-sort-ascending</property>
                   </object>
                   <packing>
@@ -136,9 +146,9 @@
                 </child>
                 <child>
                   <object class="GtkImage" id="driver_rear_window_open">
-                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
+                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-sort-ascending</property>
                   </object>
                   <packing>
@@ -148,9 +158,9 @@
                 </child>
                 <child>
                   <object class="GtkImage" id="driver_front_door_open">
-                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
+                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-about</property>
                   </object>
                   <packing>
@@ -160,9 +170,9 @@
                 </child>
                 <child>
                   <object class="GtkImage" id="driver_rear_door_open">
-                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
+                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-about</property>
                   </object>
                   <packing>
@@ -172,9 +182,9 @@
                 </child>
                 <child>
                   <object class="GtkImage" id="front_trunk_open">
-                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
+                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-about</property>
                   </object>
                   <packing>
@@ -185,8 +195,8 @@
                 <child>
                   <object class="GtkImage" id="rear_trunk_open_image">
                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-about</property>
                   </object>
                   <packing>
@@ -196,9 +206,9 @@
                 </child>
                 <child>
                   <object class="GtkImage" id="passenger_front_door_open">
-                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
+                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-about</property>
                   </object>
                   <packing>
@@ -208,9 +218,9 @@
                 </child>
                 <child>
                   <object class="GtkImage" id="passenger_rear_door_open">
-                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
+                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-about</property>
                   </object>
                   <packing>
@@ -220,9 +230,9 @@
                 </child>
                 <child>
                   <object class="GtkImage" id="passenger_rear_window_open">
-                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
+                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-sort-ascending</property>
                   </object>
                   <packing>
@@ -232,9 +242,9 @@
                 </child>
                 <child>
                   <object class="GtkImage" id="passenger_front_window_open">
-                     <property name="visible">True</property>
-                    <property name="opacity">0</property>
+                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="opacity">0</property>
                     <property name="stock">gtk-sort-ascending</property>
                   </object>
                   <packing>
@@ -366,7 +376,6 @@
             <property name="can_focus">False</property>
             <child>
               <object class="GtkFixed" id="spinner_screen_fixed">
-                <property name="visible">False</property>
                 <property name="can_focus">False</property>
                 <child>
                   <object class="GtkLabel">
