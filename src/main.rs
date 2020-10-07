@@ -17,7 +17,7 @@ use tesla::{FullVehicleData, StateOfCharge, TeslaClient, Vehicle, VehicleClient,
 extern crate log;
 use chrono::Local;
 use log::LevelFilter;
-use crate::message_types::{Message, Message2};
+use crate::message_types::{MessagesForGUI, MessagesForWorker};
 
 
 mod communicator;
@@ -212,7 +212,7 @@ fn init_logger() {
                      record.args()
             )
         })
-        .filter(Some("rusted_thunder"), LevelFilter::Info)
+        .filter(Some("rusted_thunder"), LevelFilter::Debug)
         .init();
 }
 
@@ -235,8 +235,8 @@ fn build_ui(app: &gtk::Application) {
 
     // Create 2 channels (one for each direction) between the communication thread (API caller) and main event loop
     //let (tx_to_comm, rx_on_comm):(mpsc::Sender<Message2>, mpsc::Receiver<Message2>) = mpsc::channel(1000);
-    let (tx_to_comm, rx_on_comm):(mpsc::Sender<Message2>, mpsc::Receiver<Message2>) = mpsc::channel();
-    let (tx_to_gui, rx_on_gui):(glib::Sender<Message>, glib::Receiver<Message>) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+    let (tx_to_comm, rx_on_comm):(mpsc::Sender<MessagesForWorker>, mpsc::Receiver<MessagesForWorker>) = mpsc::channel();
+    let (tx_to_gui, rx_on_gui):(glib::Sender<MessagesForGUI>, glib::Receiver<MessagesForGUI>) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
     spawn_local_handler(rx_on_gui, tx_to_comm, Rc::clone(&builder));
     communicator::start_communication_thread(rx_on_comm, tx_to_gui);
@@ -248,15 +248,16 @@ fn build_ui(app: &gtk::Application) {
 }
 
 
-fn spawn_local_handler(rx_on_gui: glib::Receiver<Message>, tx_to_comm: mpsc::Sender<Message2>, builder: Rc<gtk::Builder>) {
+fn spawn_local_handler(rx_on_gui: glib::Receiver<MessagesForGUI>, tx_to_comm: mpsc::Sender<MessagesForWorker>, builder: Rc<gtk::Builder>) {
     set_buttons(Rc::clone(&builder), tx_to_comm);
     rx_on_gui.attach(None, move |msg| {
         match msg {
-            Message::SendVehicle(vehicle) => {
+            MessagesForGUI::VehicleName(vehicle_name) => {
                 let car_name_label: gtk::Label = builder.get_object("car_name_label").unwrap();
-                car_name_label.set_text(vehicle.display_name.as_str());
+                car_name_label.set_text(vehicle_name.as_str());
             }
-            Message::SendFullVehicleData(all_data) => {
+            MessagesForGUI::FullVehicleData(all_data) => {
+                debug!("The main thread got the data!");
                 // println!("Al data : {:#?}", all_data);
                 let spinner_screen: gtk::EventBox = builder.get_object("spinner_screen").unwrap();
                 spinner_screen.set_visible(false);
@@ -354,7 +355,7 @@ fn set_button_labels(builder: Rc<gtk::Builder>, all_data: &FullVehicleData) {
     }
 }
 
-fn set_buttons(builder: Rc<gtk::Builder>, tx_to_comm: mpsc::Sender<Message2>) {
+fn set_buttons(builder: Rc<gtk::Builder>, tx_to_comm: mpsc::Sender<MessagesForWorker>) {
     let mut tx2 = tx_to_comm.clone();
     let refresh_button: gtk::Button = builder.get_object("refresh_button").unwrap();
     refresh_button.connect_clicked(move |_button| {
@@ -375,38 +376,38 @@ fn set_buttons(builder: Rc<gtk::Builder>, tx_to_comm: mpsc::Sender<Message2>) {
     });
 }
 
-fn on_refresh_button_clicked(tx_to_comm: &mut mpsc::Sender<Message2>) {
-    match tx_to_comm.send(Message2::DoRefresh()) {
+fn on_refresh_button_clicked(tx_to_comm: &mut mpsc::Sender<MessagesForWorker>) {
+    match tx_to_comm.send(MessagesForWorker::DoRefresh()) {
         Ok(_) => {}
-        Err(err) => println!("{:?}", err)
+        Err(err) => error!("{:?}", err)
     }
 }
 
 fn on_climate_control_button_clicked(_button: &gtk::Button) {
-    println!("on_climate_control_button_clicked!");
+    info!("on_climate_control_button_clicked!");
     /*
     if all_data.climate_state.is_auto_conditioning_on {
         match vclient.auto_conditioning_stop() {
             // TODO : Should I log the _v variable if _.result != true ?
-            Ok(_v) => println!("auto_conditioning has been stopped."),
-            Err(e) => println!("failed to stop the auto_conditioning: {:?}", e),
+            Ok(_v) => info!("auto_conditioning has been stopped."),
+            Err(e) => info!("failed to stop the auto_conditioning: {:?}", e),
         }
     } else {
         match vclient.auto_conditioning_start() {
-            Ok(_v) => println!("auto_conditioning has been turned on."),
-            Err(e) => println!("failed to start the auto_conditioning: {:?}", e),
+            Ok(_v) => info!("auto_conditioning has been turned on."),
+            Err(e) => info!("failed to start the auto_conditioning: {:?}", e),
         }
     }
     */
 }
 
 fn on_frunk_button_clicked(_button: &gtk::Button) {
-    println!("on_frunk_button_clicked!");
+    info!("on_frunk_button_clicked!");
     //TODO: POST /api/1/vehicles/{id}/command/actuate_trunk
 }
 
 fn on_lock_button_clicked(_button: &gtk::Button) {
-    println!("on_lock_button_clicked!");
+    info!("on_lock_button_clicked!");
     /*
     if all_data.vehicle_state.locked {
         match vclient.door_unlock() {

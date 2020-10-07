@@ -11,9 +11,9 @@ use dirs::home_dir;
 use tesla::{TeslaClient, VehicleClient};
 
 use crate::config::Config;
-use crate::message_types::{Message, Message2};
+use crate::message_types::{MessagesForGUI, MessagesForWorker};
 
-pub fn start_communication_thread(mut rx_on_comm: mpsc::Receiver<Message2>, tx_to_gui: glib::Sender<Message>) {
+pub fn start_communication_thread(mut rx_on_comm: mpsc::Receiver<MessagesForWorker>, tx_to_gui: glib::Sender<MessagesForGUI>) {
     thread::spawn(move || {
         debug!("Going to init the Tesla api clients...");
         let cfg: Config = get_config();
@@ -23,31 +23,23 @@ pub fn start_communication_thread(mut rx_on_comm: mpsc::Receiver<Message2>, tx_t
         let vehicle = client.get_vehicle_by_name(car_name.as_str()).unwrap().expect("Car does not exist by that name");
         let vclient = client.vehicle(vehicle.id);
         debug!("Got the vehicles.");
-        let vehicle_state = vehicle.state.clone();
-        tx_to_gui.send(Message::SendVehicle(vehicle)).expect("Couldn't send data to channel");
-
-        if vehicle_state != "online" {
+        tx_to_gui.send(MessagesForGUI::VehicleName(vehicle.display_name.clone())).expect("Couldn't send data to channel");
+        if vehicle.state != "online" {
             wake_up(&vclient);
         }
 
-        debug!("Going to get the vehicle data!");
-        let all_data = vclient.get_all_data().expect("Could not get all data");
+        debug!("Going to get the initial vehicle data!");
+        refresh(&vclient, tx_to_gui.clone());
 
-        tx_to_gui.send(Message::SendFullVehicleData(all_data)).expect("Couldn't send data to channel");
-
-        // TODO : Do not code this like this. Use await and futures channel
+        // Start a loop that blocks and waits for new messages
+        let mut worker_message_receiver = rx_on_comm.iter();
         loop {
-            match rx_on_comm.try_recv() {
-                Ok(msg) => {
-                    match msg {
-                        Message2::DoRefresh() => {
-                            refresh();
-                        }
-                    }
+            match worker_message_receiver.next().unwrap() {
+                MessagesForWorker::DoRefresh() => {
+                    debug!("The comm thread received a DoRefresh request!");
+                    refresh(&vclient, tx_to_gui.clone());
                 }
-                Err(_) => ()
             }
-            thread::sleep(Duration::from_millis(100));
         }
     });
 }
@@ -80,6 +72,8 @@ fn wake_up(vclient: &VehicleClient) {
     }
 }
 
-fn refresh() {
-    println!("The comm thread received a DoRefresh request!");
+fn refresh(vclient: &VehicleClient, tx_to_gui: glib::Sender<MessagesForGUI>) {
+    let all_data = vclient.get_all_data().expect("Could not get all data");
+    tx_to_gui.send(MessagesForGUI::FullVehicleData(all_data)).expect("Couldn't send data to channel");
+    debug!("The comm thread sent back the refresh request!");
 }
