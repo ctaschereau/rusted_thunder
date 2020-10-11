@@ -9,6 +9,7 @@ use std::sync::mpsc;
 
 use gio::prelude::*;
 use gtk::prelude::*;
+use gtk::{StateFlags};
 #[allow(unused_imports)]
 use tesla::{FullVehicleData, StateOfCharge, TeslaClient, Vehicle, VehicleClient, VehicleState, ClimateState};
 
@@ -222,7 +223,7 @@ fn build_ui(app: &gtk::Application) {
 
     let provider = gtk::CssProvider::new();
     provider
-        .load_from_path("./style/main.css")
+        .load_from_path("../style/main.css")
         .expect("Failed to load CSS");
     gtk::StyleContext::add_provider_for_screen(
         &gdk::Screen::get_default().expect("Error initializing gtk css provider."),
@@ -230,8 +231,8 @@ fn build_ui(app: &gtk::Application) {
         gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
 
-    let spinner_screen: gtk::EventBox = builder.get_object("spinner_screen").unwrap();
-    spinner_screen.show_all();
+    let loading_banner: gtk::Revealer = builder.get_object("loading_banner").unwrap();
+    loading_banner.show_all();
 
     // Create 2 channels (one for each direction) between the communication thread (API caller) and main event loop
     //let (tx_to_comm, rx_on_comm):(mpsc::Sender<Message2>, mpsc::Receiver<Message2>) = mpsc::channel(1000);
@@ -259,33 +260,11 @@ fn spawn_local_handler(rx_on_gui: glib::Receiver<MessagesForGUI>, tx_to_comm: mp
             MessagesForGUI::FullVehicleData(all_data) => {
                 debug!("The main thread got the data!");
                 // println!("Al data : {:#?}", all_data);
-                let spinner_screen: gtk::EventBox = builder.get_object("spinner_screen").unwrap();
-                spinner_screen.set_visible(false);
+                let loading_banner: gtk::Revealer = builder.get_object("loading_banner").unwrap();
+                loading_banner.set_visible(false);
                 set_battery_state(Rc::clone(&builder), &all_data.charge_state);
                 set_doors_and_windows_state(Rc::clone(&builder), &all_data.vehicle_state);
                 set_button_labels(Rc::clone(&builder), &all_data);
-
-
-                /*
-                let rt_app = RustedThunderApp::new(builder, client, vclient, all_data);
-
-                let car_name_label: gtk::Label = rt_app.builder.get_object("car_name_label").unwrap();
-                car_name_label.set_text(car_name.as_str());
-
-                rt_app.set_button_labels();
-
-                // TODO: how to get a different ref counter for my app from within the set_buttons method???
-                let cloned_rt_app = Rc::clone(&rt_app);
-                rt_app.set_buttons(cloned_rt_app);
-                let cloned_rt_app2 = Rc::clone(&rt_app);
-                rt_app.set_buttons2(cloned_rt_app2);
-                let cloned_rt_app3 = Rc::clone(&rt_app);
-                rt_app.set_buttons3(cloned_rt_app3);
-
-                rt_app.set_doors_and_windows_state();
-
-                rt_app.set_battery_state();
-                */
             },
         }
 
@@ -321,7 +300,7 @@ fn set_battery_state(builder: Rc<gtk::Builder>, charge_state: &StateOfCharge) {
     battery_indicator_bar.set_value(charge_state.battery_level as f64 / 100.0);
     battery_indicator_bar.add_offset_value("medium", 0.50);
     let battery_level_label: gtk::Label = builder.get_object("battery_level_label").unwrap();
-    let charging_label: gtk::Label = builder.get_object("charging_label").unwrap();
+    let car_status_label: gtk::Label = builder.get_object("car_status_label").unwrap();
 
     let nb_remaining_kms = (charge_state.battery_range * KM_PER_MILES) as i32;
     let charge_level_string = nb_remaining_kms.to_string() + "km";
@@ -336,32 +315,36 @@ fn set_battery_state(builder: Rc<gtk::Builder>, charge_state: &StateOfCharge) {
         }
         _ => charging_label_text = charge_state.charging_state.clone()
     }
-    charging_label.set_text(charging_label_text.as_str());
+    car_status_label.set_text(charging_label_text.as_str());
 }
 
 fn set_button_labels(builder: Rc<gtk::Builder>, all_data: &FullVehicleData) {
     let climate_control_button: gtk::Button = builder.get_object("climate_control_button").unwrap();
+    let climate_control_button_image: gtk::Image = builder.get_object("climate_control_button_image").unwrap();
     if all_data.climate_state.is_auto_conditioning_on {
-        climate_control_button.set_label("Turn climate control OFF");
+        // TODO : Find image with a strike through or make it
+        // climate_control_button_image.set_from_file("../images/noun_Fan_1112062.png");
+        climate_control_button.override_background_color(StateFlags::NORMAL, Some(&gdk::RGBA::red()))
     } else {
-        climate_control_button.set_label("Turn climate control ON");
+        climate_control_button_image.set_from_file("../images/noun_Fan_1112062.png");
     }
 
-    let lock_button: gtk::Button = builder.get_object("lock_button").unwrap();
+    let lock_button_image: gtk::Image = builder.get_object("lock_button_image").unwrap();
     if all_data.vehicle_state.locked {
-        lock_button.set_label("Unlock");
+        lock_button_image.set_from_file("../images/noun_padlock_174116.png");
     } else {
-        lock_button.set_label("Lock");
+        lock_button_image.set_from_file("../images/noun_padlock_174118.png");
     }
 }
 
 fn set_buttons(builder: Rc<gtk::Builder>, tx_to_comm: mpsc::Sender<MessagesForWorker>) {
-    let mut tx2 = tx_to_comm.clone();
+    let tx2 = tx_to_comm.clone();
     let refresh_button: gtk::Button = builder.get_object("refresh_button").unwrap();
     refresh_button.connect_clicked(move |_button| {
         let mut tx3 = tx2.clone();
         on_refresh_button_clicked(&mut tx3);
     });
+
     let climate_control_button: gtk::Button = builder.get_object("climate_control_button").unwrap();
     climate_control_button.connect_clicked(|_button| {
         on_climate_control_button_clicked(_button);
@@ -373,6 +356,12 @@ fn set_buttons(builder: Rc<gtk::Builder>, tx_to_comm: mpsc::Sender<MessagesForWo
     let lock_button: gtk::Button = builder.get_object("lock_button").unwrap();
     lock_button.connect_clicked(|_button| {
         on_lock_button_clicked(_button);
+    });
+
+    //let builder2 = Rc::clone(&builder);
+    let controls_button: gtk::Button = builder.get_object("controls_button").unwrap();
+    controls_button.connect_clicked(move |_button| {
+        on_controls_button_clicked(_button);
     });
 }
 
@@ -422,4 +411,10 @@ fn on_lock_button_clicked(_button: &gtk::Button) {
         }
     }
     */
+}
+
+fn on_controls_button_clicked(_button: &gtk::Button) {
+    info!("on_controls_button_clicked!");
+    //let controls_window: gtk::Window = builder.get_object("controls_window").unwrap();
+    //controls_window.show();
 }

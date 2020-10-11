@@ -1,4 +1,4 @@
-use tesla::{FullVehicleData, Vehicle};
+use tesla::{FullVehicleData};
 
 pub enum MessagesForGUI {
     VehicleName(String),

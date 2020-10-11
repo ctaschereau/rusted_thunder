@@ -13,7 +13,7 @@ use tesla::{TeslaClient, VehicleClient};
 use crate::config::Config;
 use crate::message_types::{MessagesForGUI, MessagesForWorker};
 
-pub fn start_communication_thread(mut rx_on_comm: mpsc::Receiver<MessagesForWorker>, tx_to_gui: glib::Sender<MessagesForGUI>) {
+pub fn start_communication_thread(rx_on_comm: mpsc::Receiver<MessagesForWorker>, tx_to_gui: glib::Sender<MessagesForGUI>) {
     thread::spawn(move || {
         debug!("Going to init the Tesla api clients...");
         let cfg: Config = get_config();
@@ -34,10 +34,13 @@ pub fn start_communication_thread(mut rx_on_comm: mpsc::Receiver<MessagesForWork
         // Start a loop that blocks and waits for new messages
         let mut worker_message_receiver = rx_on_comm.iter();
         loop {
-            match worker_message_receiver.next().unwrap() {
-                MessagesForWorker::DoRefresh() => {
-                    debug!("The comm thread received a DoRefresh request!");
-                    refresh(&vclient, tx_to_gui.clone());
+            let next_message = worker_message_receiver.next();
+            if next_message.is_some() {
+                match next_message.unwrap() {
+                    MessagesForWorker::DoRefresh() => {
+                        debug!("The comm thread received a DoRefresh request!");
+                        refresh(&vclient, tx_to_gui.clone());
+                    }
                 }
             }
         }
