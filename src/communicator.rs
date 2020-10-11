@@ -23,8 +23,9 @@ pub fn start_communication_thread(rx_on_comm: mpsc::Receiver<MessagesForWorker>,
         let vehicle = client.get_vehicle_by_name(car_name.as_str()).unwrap().expect("Car does not exist by that name");
         let vclient = client.vehicle(vehicle.id);
         debug!("Got the vehicles.");
-        tx_to_gui.send(MessagesForGUI::VehicleName(vehicle.display_name.clone())).expect("Couldn't send data to channel");
-        if vehicle.state != "online" {
+        let vehicle_state = vehicle.state.clone();
+        tx_to_gui.send(MessagesForGUI::VehicleInfo(vehicle)).expect("Couldn't send data to channel");
+        if vehicle_state != "online" {
             wake_up(&vclient);
         }
 

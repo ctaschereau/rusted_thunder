@@ -94,15 +94,23 @@ fn spawn_local_handler(rx_on_gui: glib::Receiver<MessagesForGUI>, tx_to_comm: mp
     set_buttons(Rc::clone(&builder), tx_to_comm);
     rx_on_gui.attach(None, move |msg| {
         match msg {
-            MessagesForGUI::VehicleName(vehicle_name) => {
+            MessagesForGUI::VehicleInfo(vehicle) => {
                 let car_name_label: gtk::Label = builder.get_object("car_name_label").unwrap();
-                car_name_label.set_text(vehicle_name.as_str());
+                car_name_label.set_text(vehicle.display_name.as_str());
+                let vin: gtk::Label = builder.get_object("vin").unwrap();
+                vin.set_text(vehicle.vin.as_str());
             }
             MessagesForGUI::FullVehicleData(all_data) => {
                 debug!("The main thread got the data!");
                 // println!("Al data : {:#?}", all_data);
                 let loading_banner: gtk::Revealer = builder.get_object("loading_banner").unwrap();
                 loading_banner.set_visible(false);
+                let car_version: gtk::Label = builder.get_object("car_version").unwrap();
+                car_version.set_text(all_data.vehicle_state.car_version.as_str());
+                let odometer: gtk::Label = builder.get_object("odometer").unwrap();
+                // TODO : Read setting to see if we print in normal units or in freedom units.
+                odometer.set_text(format!("{}", (all_data.vehicle_state.odometer * KM_PER_MILES) as i32).as_str());
+
                 set_battery_state(Rc::clone(&builder), &all_data.charge_state);
                 set_doors_and_windows_state(Rc::clone(&builder), &all_data.vehicle_state);
                 set_button_labels(Rc::clone(&builder), &all_data);
