@@ -1,8 +1,11 @@
-.box1 {
-	background-color: red;
+.black_bg {
+	/*background-color: #262626;*/
 }
-.header_bar {
-	background-color: blue;
+
+.round_button {
+	border: 1px solid lightgrey;
+	background-color: transparent;
+	border-radius: 100%;
 }
 
 levelbar block.low {

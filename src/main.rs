@@ -9,7 +9,6 @@ use std::sync::mpsc;
 
 use gio::prelude::*;
 use gtk::prelude::*;
-use gtk::{StateFlags};
 #[allow(unused_imports)]
 use tesla::{FullVehicleData, StateOfCharge, TeslaClient, Vehicle, VehicleClient, VehicleState, ClimateState};
 
@@ -19,6 +18,7 @@ extern crate log;
 use chrono::Local;
 use log::LevelFilter;
 use crate::message_types::{MessagesForGUI, MessagesForWorker};
+use tesla::DriveState;
 
 
 mod communicator;
@@ -112,6 +112,7 @@ fn spawn_local_handler(rx_on_gui: glib::Receiver<MessagesForGUI>, tx_to_comm: mp
                 odometer.set_text(format!("{}", (all_data.vehicle_state.odometer * KM_PER_MILES) as i32).as_str());
 
                 set_battery_state(Rc::clone(&builder), &all_data.charge_state);
+                set_drive_state(Rc::clone(&builder), &all_data.drive_state);
                 set_doors_and_windows_state(Rc::clone(&builder), &all_data.vehicle_state);
                 set_button_labels(Rc::clone(&builder), &all_data);
             },
@@ -167,15 +168,22 @@ fn set_battery_state(builder: Rc<gtk::Builder>, charge_state: &StateOfCharge) {
     car_status_label.set_text(charging_label_text.as_str());
 }
 
+// TODO : Test this functionality
+fn set_drive_state(builder: Rc<gtk::Builder>, drive_state: &DriveState) {
+    let car_status_label: gtk::Label = builder.get_object("car_status_label").unwrap();
+    // TODO : Make this more rust-y
+    let shift_state = drive_state.shift_state.as_ref();
+    if shift_state.is_some() && (shift_state.unwrap() == "D" || shift_state.unwrap() == "R") {
+        car_status_label.set_text(format!("Driving {}km", drive_state.speed.unwrap_or(0)).as_str());
+    }
+}
+
 fn set_button_labels(builder: Rc<gtk::Builder>, all_data: &FullVehicleData) {
-    let climate_control_button: gtk::Button = builder.get_object("climate_control_button").unwrap();
-    let climate_control_button_image: gtk::Image = builder.get_object("climate_control_button_image").unwrap();
+    let climate_strikethrough_image: gtk::Image = builder.get_object("climate_strikethrough_image").unwrap();
     if all_data.climate_state.is_auto_conditioning_on {
-        // TODO : Find image with a strike through or make it
-        // climate_control_button_image.set_from_file("../images/noun_Fan_1112062.png");
-        climate_control_button.override_background_color(StateFlags::NORMAL, Some(&gdk::RGBA::red()))
+        climate_strikethrough_image.set_visible(true);
     } else {
-        climate_control_button_image.set_from_file("../images/noun_Fan_1112062.png");
+        climate_strikethrough_image.set_visible(false);
     }
 
     let lock_button_image: gtk::Image = builder.get_object("lock_button_image").unwrap();
