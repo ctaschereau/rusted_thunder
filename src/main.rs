@@ -72,6 +72,15 @@ fn build_ui(app: &gtk::Application) {
 
     init_css_provider();
 
+    // Setup custom color profiles for the level bar
+    let battery_indicator_bar: gtk::LevelBar = builder.get_object("battery_indicator_bar").unwrap();
+    battery_indicator_bar.remove_offset_value(Some("low"));
+    battery_indicator_bar.remove_offset_value(Some("high"));
+    battery_indicator_bar.remove_offset_value(Some("full"));
+    battery_indicator_bar.add_offset_value("rt_low", 0.10);
+    battery_indicator_bar.add_offset_value("rt_medium", 0.30);
+    battery_indicator_bar.add_offset_value("rt_full", 1.0);
+
     let loading_banner: gtk::Revealer = builder.get_object("loading_banner").unwrap();
     loading_banner.show_all();
 
@@ -148,7 +157,6 @@ fn set_doors_and_windows_state(builder: Rc<gtk::Builder>, vehicle_state: &Vehicl
 fn set_battery_state(builder: Rc<gtk::Builder>, charge_state: &StateOfCharge) {
     let battery_indicator_bar: gtk::LevelBar = builder.get_object("battery_indicator_bar").unwrap();
     battery_indicator_bar.set_value(charge_state.battery_level as f64 / 100.0);
-    battery_indicator_bar.add_offset_value("medium", 0.50);
     let battery_level_label: gtk::Label = builder.get_object("battery_level_label").unwrap();
     let car_status_label: gtk::Label = builder.get_object("car_status_label").unwrap();
 
@@ -176,6 +184,7 @@ fn set_drive_state(builder: Rc<gtk::Builder>, drive_state: &DriveState) {
     if shift_state.is_some() && (shift_state.unwrap() == "D" || shift_state.unwrap() == "R") {
         car_status_label.set_text(format!("Driving {}km", drive_state.speed.unwrap_or(0)).as_str());
     }
+    // TODO : if not charging, then print "Parked"
 }
 
 fn set_button_labels(builder: Rc<gtk::Builder>, all_data: &FullVehicleData) {

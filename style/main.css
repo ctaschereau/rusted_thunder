@@ -1,25 +1,48 @@
+@define-color text-color #EBEBEB;
+@define-color subtitle-color #A6A6A6;
+
 .black_bg {
-	/*background-color: #262626;*/
+	background-color: #262626;
+}
+
+* {
+	color: @text-color;
+}
+
+button {
+	background-color: transparent;
+}
+button:hover {
+	/* Use invalid images for the background since the transparency appears to be broken on hover and on active ... */
+	background-image: url("invalid.png");
+	/* background-color: transparent; */
+}
+button:active {
+	/* TODO : Add some styling for when the button is being pressed */
+	background-image: url("invalid.png");
+	/* background-color: transparent; */
 }
 
 .round_button {
 	border: 1px solid lightgrey;
-	background-color: transparent;
 	border-radius: 100%;
 }
 
-levelbar block.low {
-	color: red;
+.section_button {
+	border: 0;
+}
+
+levelbar block.rt_low {
 	background-color: red;
-	border-style: solid;
-	border-color: red;
-	border-width: 2px;
+	border: 0;
 }
 
-levelbar block.medium {
-	color: yellow;
-	border-style: solid;
-	border-color: yellow;
-	border-width: 2px;
+levelbar block.rt_medium {
+	background-color: orange;
+	border: 0;
 }
 
+levelbar block.rt_full {
+	background-color: green;
+	border: 0;
+}

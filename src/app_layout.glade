@@ -243,6 +243,9 @@
                     <property name="orientation">vertical</property>
                     <property name="spacing">5</property>
                     <child>
+                      <placeholder/>
+                    </child>
+                    <child>
                       <object class="GtkBox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -264,6 +267,9 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="halign">start</property>
+                            <property name="label" translatable="yes">... km</property>
+                            <property name="width_chars">6</property>
+                            <property name="max_width_chars">6</property>
                           </object>
                           <packing>
                             <property name="expand">True</property>
@@ -290,9 +296,6 @@
                         <property name="fill">True</property>
                         <property name="position">2</property>
                       </packing>
-                    </child>
-                    <child>
-                      <placeholder/>
                     </child>
                     <child>
                       <object class="GtkGrid">
@@ -339,7 +342,7 @@
                           <object class="GtkImage" id="car_image">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="pixbuf">../images/noun_Tesla Model 3_3374328.png</property>
+                            <property name="pixbuf">../images/noun_Tesla Model 3_3374328_blue.png</property>
                           </object>
                           <packing>
                             <property name="left_attach">1</property>
@@ -458,6 +461,7 @@
                             <property name="receives_default">True</property>
                             <property name="halign">center</property>
                             <property name="valign">center</property>
+                            <property name="relief">none</property>
                             <signal name="clicked" handler="on_climate_control_button_clicked" swapped="no"/>
                             <child>
                               <object class="GtkOverlay">
@@ -502,6 +506,7 @@
                             <property name="receives_default">True</property>
                             <property name="halign">center</property>
                             <property name="valign">center</property>
+                            <property name="relief">none</property>
                             <child>
                               <object class="GtkImage" id="frunk_button_image">
                                 <property name="visible">True</property>
@@ -528,6 +533,7 @@
                             <property name="receives_default">True</property>
                             <property name="halign">center</property>
                             <property name="valign">center</property>
+                            <property name="relief">none</property>
                             <signal name="clicked" handler="on_lock_button_clicked" swapped="no"/>
                             <child>
                               <object class="GtkImage" id="lock_button_image">
@@ -560,10 +566,11 @@
                         <property name="orientation">vertical</property>
                         <property name="homogeneous">True</property>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="climate_button">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">True</property>
+                            <property name="relief">none</property>
                             <child>
                               <object class="GtkBox">
                                 <property name="visible">True</property>
@@ -608,6 +615,9 @@
                                 </child>
                               </object>
                             </child>
+                            <style>
+                              <class name="section_button"/>
+                            </style>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -620,6 +630,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">True</property>
+                            <property name="relief">none</property>
                             <child>
                               <object class="GtkBox">
                                 <property name="visible">True</property>
@@ -664,6 +675,9 @@
                                 </child>
                               </object>
                             </child>
+                            <style>
+                              <class name="section_button"/>
+                            </style>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -672,10 +686,11 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="charging_button">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">True</property>
+                            <property name="relief">none</property>
                             <child>
                               <object class="GtkBox">
                                 <property name="visible">True</property>
@@ -720,6 +735,9 @@
                                 </child>
                               </object>
                             </child>
+                            <style>
+                              <class name="section_button"/>
+                            </style>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -728,10 +746,11 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="location_button">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">True</property>
+                            <property name="relief">none</property>
                             <child>
                               <object class="GtkBox">
                                 <property name="visible">True</property>
@@ -776,6 +795,9 @@
                                 </child>
                               </object>
                             </child>
+                            <style>
+                              <class name="section_button"/>
+                            </style>
                           </object>
                           <packing>
                             <property name="expand">False</property>
