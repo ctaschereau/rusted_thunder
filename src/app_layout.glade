@@ -440,6 +440,9 @@
                         <child>
                           <placeholder/>
                         </child>
+                        <style>
+                          <class name="white_halo"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -1035,9 +1038,6 @@
                         <property name="position">100</property>
                       </packing>
                     </child>
-                    <style>
-                      <class name="black_bg"/>
-                    </style>
                   </object>
                 </child>
               </object>
@@ -1049,6 +1049,9 @@
             <property name="position">1</property>
           </packing>
         </child>
+        <style>
+          <class name="black_bg"/>
+        </style>
       </object>
     </child>
   </object>

@@ -10,3 +10,7 @@ api_token = "____SOME_API_TOKEN_OBTAINED_FROM_A_LOGIN_ENDPOINT____"
 default_vehicle = "CAR_NAME_GOES_HERE"
 ``` 
 At the moment, the api_token needs to be generated from outside of this app.
+
+Credits
+----
+TODO!
