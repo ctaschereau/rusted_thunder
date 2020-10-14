@@ -159,7 +159,7 @@ fn set_battery_state(builder: Rc<gtk::Builder>, charge_state: &StateOfCharge) {
     battery_indicator_bar.set_value(charge_state.battery_level as f64 / 100.0);
     let battery_level_label: gtk::Label = builder.get_object("battery_level_label").unwrap();
     let car_status_label: gtk::Label = builder.get_object("car_status_label").unwrap();
-
+    // TODO : Read setting to see if we print in normal units or in freedom units.
     let nb_remaining_kms = (charge_state.battery_range * KM_PER_MILES) as i32;
     let charge_level_string = nb_remaining_kms.to_string() + "km";
     battery_level_label.set_text(charge_level_string.as_str());
@@ -176,13 +176,14 @@ fn set_battery_state(builder: Rc<gtk::Builder>, charge_state: &StateOfCharge) {
     car_status_label.set_text(charging_label_text.as_str());
 }
 
-// TODO : Test this functionality
 fn set_drive_state(builder: Rc<gtk::Builder>, drive_state: &DriveState) {
     let car_status_label: gtk::Label = builder.get_object("car_status_label").unwrap();
     // TODO : Make this more rust-y
     let shift_state = drive_state.shift_state.as_ref();
     if shift_state.is_some() && (shift_state.unwrap() == "D" || shift_state.unwrap() == "R") {
-        car_status_label.set_text(format!("Driving {}km", drive_state.speed.unwrap_or(0)).as_str());
+        // TODO : Read setting to see if we print in normal units or in freedom units.
+        let speed: i32 = (drive_state.speed.unwrap_or(0) as f64 * KM_PER_MILES) as i32;
+        car_status_label.set_text(format!("Driving {}km", speed).as_str());
     }
     // TODO : if not charging, then print "Parked"
 }
