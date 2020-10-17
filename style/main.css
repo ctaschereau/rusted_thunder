@@ -7,7 +7,7 @@
 
 .white_halo {
 	background: rgb(91,91,91);
-	background: radial-gradient(circle, rgba(91,91,91,1) 15%, rgba(91,91,91,0) 45%);
+	background: radial-gradient(circle, rgba(91,91,91,1) 20px, rgba(91,91,91,0) 150px);
 }
 
 * {

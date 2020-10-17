@@ -81,7 +81,7 @@ fn build_ui(app: &gtk::Application) {
     battery_indicator_bar.add_offset_value("rt_medium", 0.30);
     battery_indicator_bar.add_offset_value("rt_full", 1.0);
 
-    let loading_banner: gtk::Revealer = builder.get_object("loading_banner").unwrap();
+    let loading_banner: gtk::Box = builder.get_object("loading_banner").unwrap();
     loading_banner.show_all();
 
     // Create 2 channels (one for each direction) between the communication thread (API caller) and main event loop
@@ -112,7 +112,7 @@ fn spawn_local_handler(rx_on_gui: glib::Receiver<MessagesForGUI>, tx_to_comm: mp
             MessagesForGUI::FullVehicleData(all_data) => {
                 debug!("The main thread got the data!");
                 // println!("Al data : {:#?}", all_data);
-                let loading_banner: gtk::Revealer = builder.get_object("loading_banner").unwrap();
+                let loading_banner: gtk::Box = builder.get_object("loading_banner").unwrap();
                 loading_banner.set_visible(false);
                 let car_version: gtk::Label = builder.get_object("car_version").unwrap();
                 car_version.set_text(all_data.vehicle_state.car_version.as_str());
@@ -234,7 +234,7 @@ fn set_buttons(builder: Rc<gtk::Builder>, tx_to_comm: mpsc::Sender<MessagesForWo
 
 fn on_refresh_button_clicked(tx_to_comm: &mut mpsc::Sender<MessagesForWorker>) {
     // TODO :
-    //let loading_banner: gtk::Revealer = builder.get_object("loading_banner").unwrap();
+    //let loading_banner: gtk::Box = builder.get_object("loading_banner").unwrap();
     //loading_banner.show_all();
     match tx_to_comm.send(MessagesForWorker::DoRefresh()) {
         Ok(_) => {}
