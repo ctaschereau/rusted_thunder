@@ -94,6 +94,15 @@ fn build_ui(app: &gtk::Application) {
 
     let window: gtk::ApplicationWindow = builder.get_object("main_window").unwrap();
     window.set_application(Some(app));
+    window.connect_focus_in_event(|_, _| {
+        println!("got the focus");
+        Inhibit(true)
+    });
+    window.connect_focus_out_event(|_, _| {
+        println!("lost the focus");
+        Inhibit(true)
+    });
+    // gdk::EventMask::FocusChangeMask
     window.show();
     info!("GTK app init done!");
 }
