@@ -3,17 +3,15 @@ use std::fs;
 use std::thread::sleep;
 use std::time::Duration;
 
-//use std::rc::Rc;
-//use std::sync::Arc;
-///use std::cell::RefCell;
-///use std::rc::Rc;
+use std::sync::Arc;
+use std::cell::RefCell;
 
 use dirs::home_dir;
 
-use gio::prelude::*;
+//use gio::prelude::*;
 use gtk::prelude::*;
 
-use tesla::{FullVehicleData, StateOfCharge, TeslaClient, Vehicle, VehicleClient, VehicleState, ClimateState, DriveState};
+use tesla::{FullVehicleData, StateOfCharge, TeslaClient, Vehicle, VehicleClient, VehicleState, /*ClimateState, */DriveState};
 
 use crate::Config;
 
@@ -55,14 +53,17 @@ pub struct UIElements {
 
 pub struct MyApp {
     ui_elements: UIElements,
-    client: TeslaClient,
+    //client: TeslaClient,
     vehicle: Vehicle,
     vclient: VehicleClient,
+    recent_data: Option<FullVehicleData>,
 }
 
+// https://gtk-rs.org/docs-src/tutorial/closures
+// https://nora.codes/tutorial/speedy-desktop-apps-with-gtk-and-rust/
+
 impl MyApp {
-    // pub fn new(ui_elements: UIElements) -> Rc<RefCell<MyApp>> {
-    pub fn new(ui_elements: UIElements) -> MyApp {
+    pub fn new(ui_elements: UIElements) -> Arc<RefCell<MyApp>> {
         let cfg: Config = MyApp::get_config();
         let client = TeslaClient::default(cfg.global.api_token.as_str());
         debug!("Tesla api client init done. Going to fetch the vehicles...");
@@ -73,15 +74,15 @@ impl MyApp {
 
         let my_app = MyApp{
             ui_elements: ui_elements,
-            client: client,
+            //client: client,
             vehicle: vehicle,
             vclient: vclient,
+            recent_data: None,
         };
 
-        my_app.set_buttons();
-        return my_app;
-        //let my_app_rc: Rc<RefCell<MyApp>> = Rc::new(RefCell::new(my_app));
-        //return my_app_rc.clone();
+        let my_app_rc: Arc<RefCell<MyApp>> = Arc::new(RefCell::new(my_app));
+        MyApp::set_buttons(my_app_rc.clone());
+        my_app_rc.clone()
     }
 
     fn get_config() -> Config {
@@ -105,6 +106,40 @@ impl MyApp {
         });
         */
         client.get_vehicle_by_name(car_name).unwrap().expect("Car does not exist by that name")
+    }
+
+    fn set_buttons(my_app: Arc<RefCell<MyApp>>) {
+        let ui_elems = &my_app.borrow().ui_elements;
+        {
+            let my_app_rc: Arc<RefCell<MyApp>> = my_app.clone();
+            ui_elems.refresh_button.connect_clicked(move |_| {
+                my_app_rc.borrow_mut().on_refresh_button_clicked();
+            });
+        }
+        {
+            let my_app_rc: Arc<RefCell<MyApp>> = my_app.clone();
+            ui_elems.climate_control_button.connect_clicked(move |_| {
+                my_app_rc.borrow_mut().on_climate_control_button_clicked();
+            });
+        }
+        {
+            let my_app_rc: Arc<RefCell<MyApp>> = my_app.clone();
+            ui_elems.frunk_button.connect_clicked(move |_| {
+                my_app_rc.borrow_mut().on_frunk_button_clicked();
+            });
+        }
+        {
+            let my_app_rc: Arc<RefCell<MyApp>> = my_app.clone();
+            ui_elems.lock_button.connect_clicked(move |_| {
+                my_app_rc.borrow_mut().on_lock_button_clicked();
+            });
+        }
+        {
+            let my_app_rc: Arc<RefCell<MyApp>> = my_app.clone();
+            ui_elems.controls_button.connect_clicked(move |_| {
+                my_app_rc.borrow_mut().on_controls_button_clicked();
+            });
+        }
     }
 
     // Instance methods
@@ -138,9 +173,15 @@ impl MyApp {
         }
     }
 
-    pub fn refresh(&self) {
+    pub fn refresh(&mut self) {
         let all_data = self.vclient.get_all_data().expect("Could not get all data");
-        self.ui_elements.loading_banner.set_visible(false);
+        self.recent_data = Some(all_data);
+        self.do_refresh();
+    }
+
+    fn do_refresh(&self) {
+        info!("Doing refresh");
+        let all_data: &FullVehicleData = self.recent_data.as_ref().unwrap();
         self.ui_elements.car_version.set_text(all_data.vehicle_state.car_version.as_str());
         // TODO : Read setting to see if we print in normal units or in freedom units.
         let _tmp1 = (all_data.vehicle_state.odometer * KM_PER_MILES) as i32;
@@ -151,6 +192,7 @@ impl MyApp {
         self.set_drive_state(&all_data.drive_state);
         self.set_doors_and_windows_state(&all_data.vehicle_state);
         self.set_button_labels(&all_data);
+        self.ui_elements.loading_banner.set_visible(false);
     }
 
     fn set_doors_and_windows_state(&self, vehicle_state: &VehicleState) {
@@ -210,99 +252,47 @@ impl MyApp {
         }
     }
 
-    /*
-struct Dialog {
-   payload: Foo,
-}
-
-impl Dialog {
-    fn init() -> Rc<RefCell<Dialog>> {
-        let dialog = Dialog { payload: something() };
-        let handle = Rc::new(RefCell::new(dialog));
-        let handle1 = handle.clone();
-        button.connect_clicked(move |_| {
-              handle1.borrow_mut().do_button()
-        };
-        handle
-    }
-
-    fn do_button(&mut self) {
-        // do something
-    }
-}
-    */
-
-    fn set_buttons(&self) {
-        /*
-        let self2 = self.clone();
-        self.ui_elements.refresh_button.connect_clicked(|_| {
-            self2.borrow_mut().on_refresh_button_clicked();
-        });
-        self.ui_elements.climate_control_button.connect_clicked(|_| {
-            self.on_climate_control_button_clicked();
-        });
-        self.ui_elements.frunk_button.connect_clicked(|_| {
-            self.on_frunk_button_clicked();
-        });
-        self.ui_elements.lock_button.connect_clicked(|_| {
-            self.on_lock_button_clicked();
-        });
-
-        self.ui_elements.controls_button.connect_clicked( |_| {
-            self.on_controls_button_clicked();
-        });
-        */
-    }
-
-    fn on_refresh_button_clicked(&self) {
+    fn on_refresh_button_clicked(&mut self) {
         info!("on_refresh_button_clicked!");
-        // TODO :
-        //let loading_banner: gtk::Box = builder.get_object("loading_banner").unwrap();
-        //loading_banner.show_all();
+        self.ui_elements.loading_banner.show_all();
 
-        /*
-        (refresh) button click
-        start loading
-        spawn thread
-        wire channel
-        on message from channel
-            remove loading
-            (if refresh,)
-            self.on_refresh_info()
-        */
-
+        self.refresh();
         /*
         let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
+        let my_app_rc = self.clone();
+        let vclient = &my_app_rc.borrow().vclient;
         thread::spawn(move || {
             let all_data = vclient.get_all_data().expect("Could not get all data");
             tx.send(all_data).expect("Couldn't send data to channel");
         });
 
+        let my_app_rc2 = self.clone();
         rx.attach(None, move |all_data| {
-            let builder2: Rc<gtk::Builder> = Rc::clone(&builder);
-            do_refresh(builder2, all_data);
+            my_app_rc2.borrow().refresh_using_data(all_data);
             glib::Continue(true)
         });
         */
     }
 
-    fn on_climate_control_button_clicked(&self) {
+    fn on_climate_control_button_clicked(&mut self) {
         info!("on_climate_control_button_clicked!");
-        /*
-        if all_data.climate_state.is_auto_conditioning_on {
-            match vclient.auto_conditioning_stop() {
+        self.ui_elements.loading_banner.show_all();
+        if self.recent_data.as_ref().unwrap().climate_state.is_auto_conditioning_on {
+            match self.vclient.auto_conditioning_stop() {
                 // TODO : Should I log the _v variable if _.result != true ?
                 Ok(_v) => info!("auto_conditioning has been stopped."),
                 Err(e) => info!("failed to stop the auto_conditioning: {:?}", e),
             }
         } else {
-            match vclient.auto_conditioning_start() {
+            match self.vclient.auto_conditioning_start() {
                 Ok(_v) => info!("auto_conditioning has been turned on."),
                 Err(e) => info!("failed to start the auto_conditioning: {:?}", e),
             }
         }
-        */
+        // TODO : For some reason, the refresh appears to be too close to the action ...
+        sleep(Duration::from_millis(200));
+        self.refresh();
     }
 
     fn on_frunk_button_clicked(&self) {
@@ -310,27 +300,28 @@ impl Dialog {
         //TODO: POST /api/1/vehicles/{id}/command/actuate_trunk
     }
 
-    fn on_lock_button_clicked(&self) {
+    fn on_lock_button_clicked(&mut self) {
         info!("on_lock_button_clicked!");
-        /*
-        if all_data.vehicle_state.locked {
-            match vclient.door_unlock() {
+        self.ui_elements.loading_banner.show_all();
+        if self.recent_data.as_ref().unwrap().vehicle_state.locked {
+            match self.vclient.door_unlock() {
                 // TODO : Should I log the _v variable if _.result != true ?
-                Ok(_v) => println!("doors have been unlocked."),
-                Err(e) => println!("failed to unlock the doors: {:?}", e),
+                Ok(_v) => info!("doors have been unlocked."),
+                Err(e) => error!("failed to unlock the doors: {:?}", e),
             }
         } else {
-            match vclient.door_lock() {
-                Ok(_v) => println!("doors have been locked."),
-                Err(e) => println!("failed to lock the doors: {:?}", e),
+            match self.vclient.door_lock() {
+                Ok(_v) => info!("doors have been locked."),
+                Err(e) => error!("failed to lock the doors: {:?}", e),
             }
         }
-        */
+        // TODO : For some reason, the refresh appears to be too close to the action ...
+        sleep(Duration::from_millis(200));
+        self.refresh();
     }
 
     fn on_controls_button_clicked(&self) {
         info!("on_controls_button_clicked!");
-        //let controls_window: gtk::Window = builder.get_object("controls_window").unwrap();
-        //controls_window.show();
+        self.ui_elements.controls_window.show();
     }
 }

@@ -1,6 +1,3 @@
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-#![warn(dead_code)]
 extern crate gdk;
 extern crate gio;
 extern crate glib;
@@ -120,10 +117,10 @@ fn build_ui(app: &gtk::Application) {
     info!("GTK app init done!");
 
     app_ui_elements.loading_banner.show_all();
-    let mut my_app = app::MyApp::new(app_ui_elements);
-    my_app.set_basic_vehicle_info();
-    my_app.wake_up_if_needed();
-    my_app.refresh();
+    let my_app = app::MyApp::new(app_ui_elements);
+    my_app.borrow().set_basic_vehicle_info();
+    my_app.borrow_mut().wake_up_if_needed();
+    my_app.borrow_mut().refresh();
 }
 
 fn setup_level_bar_custom_colors(battery_indicator_bar: &gtk::LevelBar) {
