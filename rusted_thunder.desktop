@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=Rusted Thunder
+Comment=Tesla app for Linux
+Exec=rusted_thunder
+Icon=flash.png
+Terminal=false

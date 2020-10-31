@@ -12,6 +12,8 @@ default_vehicle = "CAR_NAME_GOES_HERE"
 ``` 
 At the moment, the api_token needs to be generated from outside of this app.
 
+<div>Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
+
 ## Icon credits from the Noun Project
 - Battery by Mustofa Bayu from the Noun Project
 - Car Door by Ralf Schmitzer from the Noun Project
