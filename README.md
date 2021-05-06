@@ -2,6 +2,9 @@
 Rust app to interact with the Tesla API.
 This could eventually be used as a replacement for the official Tesla Android or iOS app.
 
+https://gist.github.com/darconeous/2cd2de11148e3a75685940158bddf933
+https://www.google.com/search?client=firefox-b-d&q=rust+nfc
+
 ## Config
 A config file is required for this app to function. At the moment, the file must be named *.teslac* and must reside in the user's home folder.
 Also, it must be a valid .toml file and contain the following properties :
